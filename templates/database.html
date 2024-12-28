@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../static/css/layui.css">
+</head>
+<body>
+<div class="layui-btn-container">
+  <button class="layui-btn demo-dropdown-base">
+    <span>下拉菜单</span>
+    <i class="layui-icon layui-icon-down layui-font-12"></i>
+  </button>
+  <button class="layui-btn layui-btn-primary layui-icon layui-icon-add-circle" id="add-button" style="display: none; font-size: 24px;">学生
+  </button>
+  <button class="layui-btn layui-btn-primary layui-icon layui-icon-add-circle" id="addc-button" style="display: none; font-size: 24px;">课程
+  </button>
+
+</div>
+
+<!-- 表格容器 -->
+<div id="table-container"></div>
+
+<!-- Edit Student Modal -->
+<div id="edit-student-modal" class="layui-form" style="display: none; padding: 20px;">
+    <div class="layui-form-item">
+        <label class="layui-form-label">SID</label>
+        <div class="layui-input-block">
+            <input type="text" id="edit-sid" required lay-verify="required" placeholder="Enter student ID" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">Name</label>
+        <div class="layui-input-block">
+            <input type="text" id="edit-sname" required lay-verify="required" placeholder="Enter student name" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">Grade</label>
+        <div class="layui-input-block">
+            <input type="text" id="edit-grade" required lay-verify="required" placeholder="Enter student grade" class="layui-input">
+        </div>
+    </div>
+    <div class="layui-form-item" style="text-align: right;">
+        <div class="layui-input-block" style="text-align: right;">
+            <button class="layui-btn" id="save-student-btn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script src="../static/layui.js"></script>
+<script>
+layui.use(['layer', 'form', 'dropdown'], function(){
+  var layer = layui.layer;
+  var form = layui.form;
+  var dropdown = layui.dropdown;
+
+  // 渲染下拉菜单
+  dropdown.render({
+    elem: '.demo-dropdown-base', // 绑定元素选择器
+    data: [{
+      title: 'student message',
+      id: 100
+    },{
+      title: 'course message',
+      id: 101
+    },{
+      title: 'choice message',
+      id: 102
+    }],
+    click: function(obj){
+      this.elem.find('span').text(obj.title);
+      document.getElementById('add-button').style.display = 'inline-block';
+      document.getElementById('addc-button').style.display = 'inline-block';
+      // 根据选择的菜单项动态渲染不同的表格
+      if (obj.id === 100) {
+        document.getElementById('add-button').style.display = 'inline-block';
+        renderTable('student', {{ students|tojson }});  // 渲染学生信息表格
+      } else if (obj.id === 101) {
+        document.getElementById('addc-button').style.display = 'inline-block';
+        renderTable('course', {{ courses|tojson }});  // 渲染课程信息表格
+      } else if (obj.id === 102) {
+        //document.getElementById('addcc-button').style.display = 'inline-block';
+        renderTable('choice', {{ choices|tojson }});  // 渲染选课信息表格
+      }
+    }
+  });
+
+  // 渲染表格的函数
+  function renderTable(type, data) {
+    var tableHtml = '';
+
+    if (type === 'student') {
+      tableHtml = `
+        <table class="layui-table">
+          <thead>
+            <tr>
+              <th>sid</th>
+              <th>sname</th>
+              <th>grade</th>
+              <th>operation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if students %}
+            {% for student in students %}
+            <tr>
+                <td>{{ student[0] }}</td>
+                <td>{{ student[1] }}</td>
+                <td>{{ student[2] }}</td>
+                <td>
+                    <button class="layui-btn layui-btn-sm edit-btn"
+                            data-sid="{{ student[0] }}"
+                            data-sname="{{ student[1] }}"
+                            data-grade="{{ student[2] }}">修改</button>
+                    <button class="layui-btn layui-btn-sm layui-bg-red delete-btn"
+                            data-sid="{{ student[0] }}">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="4">No students available</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      `;
+    } else if (type === 'course') {
+      tableHtml = `
+        <table class="layui-table">
+          <thead>
+            <tr>
+              <th>cid</th>
+              <th>cname</th>
+              <th>credit</th>
+              <th>operation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if courses %}
+            {% for course in courses %}
+            <tr>
+                <td>{{ course[0] }}</td>
+                <td>{{ course[1] }}</td>
+                <td>{{ course[2] }}</td>
+                <td>
+                    <button class="layui-btn layui-btn-sm editc-btn"
+                            data-cid="{{ course[0] }}"
+                            data-cname="{{ course[1] }}"
+                            data-credit="{{ course[2] }}">修改</button>
+                    <button class="layui-btn layui-btn-sm layui-bg-red deletec-btn"
+                            data-cid="{{ course[0] }}">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="4">No courses available</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      `;
+    } else if (type === 'choice') {
+      tableHtml = `
+        <table class="layui-table">
+          <thead>
+            <tr>
+              <th>no.</th>
+              <th>cid</th>
+              <th>sid</th>
+              <th>operation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if choices %}
+            {% for choice in choices %}
+            <tr>
+                <td>{{ choice[2] }}</td>
+                <td>{{ choice[1] }}</td>
+                <td>{{ choice[0] }}</td>
+                <td>
+                    <button class="layui-btn layui-btn-sm layui-bg-red deletecc-btn"
+                            data-no="{{ choice[2] }}">删除</button>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="4">No choices available</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // 更新表格容器
+    document.getElementById('table-container').innerHTML = tableHtml;
+
+    // 为学生编辑按钮绑定事件
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const sid = this.getAttribute('data-sid');
+            const sname = this.getAttribute('data-sname');
+            const grade = this.getAttribute('data-grade');
+
+            layer.open({
+                type: 1,
+                title: 'Edit Student',
+                area: ['500px', '300px'],
+                content: `
+                    <div class="layui-form" style="padding: 20px;">
+                        <form action="/update_student" method="POST">
+                            <div class="demo-reg-container">
+                            <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="current_sid" value="${sid}" lay-verify="required" placeholder="" autocomplete="off" class="layui-input" lay-affix="clear" readonly>
+                                </div>
+                              </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="sid" value="${sid}" lay-verify="required" placeholder="Enter student ID" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-user"></i>
+                                  </div>
+                                  <input type="text" name="sname" value="${sname}" lay-verify="required" placeholder="Enter student name" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="grade" value="${grade}" lay-verify="required" placeholder="Enter student grade" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <button class="layui-btn layui-btn-fluid" type="submit">save</button>
+                              </div>
+                            </div>
+                          </form>
+                    </div>
+                `
+            });
+        });
+    });
+     // 为学生删除按钮绑定事件
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const sid = this.getAttribute('data-sid');
+
+            fetch('/delete_student', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ sid: sid })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      location.reload();
+                  } else {
+                      console.error(data.message);
+                  }
+              }).catch(error => {
+                  console.error('Error:', error);
+              });
+        });
+    });
+
+
+    // 为课程编辑按钮绑定事件
+    document.querySelectorAll('.editc-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const cid = this.getAttribute('data-cid');
+            const cname = this.getAttribute('data-cname');
+            const credit = this.getAttribute('data-credit');
+
+            layer.open({
+                type: 1,
+                title: 'Edit Course',
+                area: ['500px', '300px'],
+                content: `
+                    <div class="layui-form" style="padding: 20px;">
+                        <form action="/update_course" method="POST">
+                            <div class="demo-reg-container">
+                            <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="current_cid" value="${cid}" lay-verify="required" placeholder="" autocomplete="off" class="layui-input" lay-affix="clear" readonly>
+                                </div>
+                              </div>
+                            <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="cid" value="${cid}" lay-verify="required" placeholder="Enter course ID" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-user"></i>
+                                  </div>
+                                  <input type="text" name="cname" value="${cname}" lay-verify="required" placeholder="Enter course name" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <div class="layui-input-wrap">
+                                  <div class="layui-input-prefix">
+                                    <i class="layui-icon layui-icon-about"></i>
+                                  </div>
+                                  <input type="text" name="credit" value="${credit}" lay-verify="required" placeholder="Enter course credit" autocomplete="off" class="layui-input" lay-affix="clear">
+                                </div>
+                              </div>
+                              <div class="layui-form-item">
+                                <button class="layui-btn layui-btn-fluid" type="submit">save</button>
+                              </div>
+                            </div>
+                          </form>
+                    </div>
+                `
+            });
+        });
+    });
+     // 为课程删除按钮绑定事件
+    document.querySelectorAll('.deletec-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const cid = this.getAttribute('data-cid');
+
+            fetch('/delete_course', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ cid: cid })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      location.reload();
+                  } else {
+                      console.error(data.message);
+                  }
+              }).catch(error => {
+                  console.error('Error:', error);
+              });
+        });
+    });
+
+     // 为选课删除按钮绑定事件
+    document.querySelectorAll('.deletecc-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const no = this.getAttribute('data-no');
+
+            fetch('/delete_ch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ no: no })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      location.reload();
+                  } else {
+                      console.error(data.message);
+                  }
+              }).catch(error => {
+                  console.error('Error:', error);
+              });
+        });
+    });
+
+  // 为添加学生按钮绑定事件
+  document.getElementById('add-button').addEventListener('click', function() {
+      layer.open({
+          type: 1,
+          title: 'Add Student',
+          area: ['500px', '300px'],
+          content: `
+            <div class="layui-form" style="padding: 20px;">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">SID</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-sid" required lay-verify="required" placeholder="Enter student ID" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Name</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-sname" required lay-verify="required" placeholder="Enter student name" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Grade</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-grade" required lay-verify="required" placeholder="Enter student grade" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item" style="text-align: right;">
+                    <div class="layui-input-block" style="text-align: right;">
+                        <button class="layui-btn" id="save-new-student-btn">Save</button>
+                    </div>
+                </div>
+            </div>
+        `
+      });
+      // 为学生保存按钮绑定事件
+      document.getElementById('save-new-student-btn').addEventListener('click', function () {
+          const sid = document.getElementById('add-sid').value.trim();
+          const sname = document.getElementById('add-sname').value.trim();
+          const grade = document.getElementById('add-grade').value.trim();
+
+          fetch('/add_student', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({sid: sid, sname: sname, grade: grade})
+          }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      layer.closeAll();
+                      location.reload();
+                  } else {
+                      console.error(data.message);
+                  }
+              }).catch(error => {
+              console.error('Error:', error);
+          });
+      });
+  });
+    // 为添加课程按钮绑定事件
+  document.getElementById('addc-button').addEventListener('click', function() {
+      layer.open({
+          type: 1,
+          title: 'Add Course',
+          area: ['500px', '300px'],
+          content: `
+            <div class="layui-form" style="padding: 20px;">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">CID</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-cid" required lay-verify="required" placeholder="Enter course ID" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Name</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-cname" required lay-verify="required" placeholder="Enter course name" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">Credit</label>
+                    <div class="layui-input-block">
+                        <input type="text" id="add-credit" required lay-verify="required" placeholder="Enter course credit" class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item" style="text-align: right;">
+                    <div class="layui-input-block" style="text-align: right;">
+                        <button class="layui-btn" id="save-new-course-btn">Save</button>
+                    </div>
+                </div>
+            </div>
+        `
+      });
+      // 为课程保存按钮绑定事件
+      document.getElementById('save-new-course-btn').addEventListener('click', function () {
+          const cid = document.getElementById('add-cid').value.trim();
+          const cname = document.getElementById('add-cname').value.trim();
+          const credit = document.getElementById('add-credit').value.trim();
+
+          fetch('/add_course', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: new URLSearchParams({cid: cid, cname: cname, credit: credit})
+          }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      layer.closeAll();
+                      location.reload();
+                  } else {
+                      console.error(data.message);
+                  }
+              }).catch(error => {
+              console.error('Error:', error);
+          });
+      });
+  });
+  }
+});
+</script>
+</body>
+</html>

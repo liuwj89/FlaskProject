@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Curriculum</title>
+    <link rel="stylesheet" href="../static/css/layui.css">
+    <style>
+        h2 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Curriculum</h2>
+<input type="hidden" id="username" value="{{ username }}">
+<table class="layui-table">
+    <thead>
+        <tr>
+            <th>CID</th>
+            <th>Course Name</th>
+            <th>Credit</th>
+            <th>Operation</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if courses %}
+            {% for course in courses %}
+            <tr>
+                <td>{{ course[0] }}</td>
+                <td>{{ course[1] }}</td>
+                <td>{{ course[2] }}</td>
+                <td>
+                    <button class="layui-btn layui-btn-sm select-btn" data-cid="{{ course[0] }}" data-cname="{{ course[1] }}" data-credit="{{ course[2] }}">选择</button>
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="4">No courses available</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+<h2>已选课程</h2>
+<table class="layui-table" id="selected-courses">
+    <thead>
+        <tr>
+            <th>CID</th>
+            <th>Course Name</th>
+            <th>Credit</th>
+            <th>Operation</th>
+        </tr>
+    </thead>
+    <tbody>
+     {% for course in selected_courses %}
+    <tr>
+        <td>{{ course[0] }}</td>
+        <td>{{ course[1] }}</td>
+        <td>{{ course[2] }}</td>
+        <td><button class="layui-btn layui-btn-sm layui-bg-red remove-btn" data-cid="{{ course[0] }}">删除</button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<script src="../static/layui.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectedCoursesTable = document.getElementById('selected-courses').getElementsByTagName('tbody')[0];
+    //删除按钮
+    document.querySelectorAll('.remove-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const row = this.closest('tr');
+            const cid = this.getAttribute('data-cid');
+            const username = document.getElementById('username').value;
+            fetch('/delete_choice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ cid: cid, username: username })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      selectedCoursesTable.deleteRow(row.rowIndex - 1);
+                      console.log(data.message);
+                  } else {
+                      console.error(data.message);
+                  }
+              });
+        });
+    });
+
+    document.querySelectorAll('.select-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const cid = this.getAttribute('data-cid');
+            const cname = this.getAttribute('data-cname');
+            const credit = this.getAttribute('data-credit');
+            const username = document.getElementById('username').value;
+
+            // Check if the course is already selected
+            fetch('/add_choice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ cid: cid, username: username })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      // Add to the selected courses table
+                      const newRow = selectedCoursesTable.insertRow();
+                      newRow.innerHTML = `
+                          <td>${cid}</td>
+                          <td>${cname}</td>
+                          <td>${credit}</td>
+                          <td><button class="layui-btn layui-btn-sm layui-bg-red remove-btn" >删除</button></td>
+
+                      `;
+
+                      // Add event listener for the remove button
+                      newRow.querySelector('.remove-btn').addEventListener('click', function() {
+                          const row=this.closest('tr');
+                          const cid=this.getAttribute('data-cid');
+                          const username=document.getElementById('username').value;
+                          fetch('/delete_choice', {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({ cid: cid, username: username })
+                          }).then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    selectedCoursesTable.deleteRow(newRow.rowIndex - 1);
+                                    console.log(data.message);
+                                } else {
+                                    console.error(data.message);
+                                }
+                            });
+                      });
+
+                      console.log(data.message);
+                  } else {
+                      console.error(data.message);
+                  }
+              });
+        });
+    });
+});
+
+function updateChoicePage() {
+    fetch('/get_choices')
+        .then(response => response.json())
+        .then(data => {
+            const selectedCoursesTable = document.getElementById('selected-courses').getElementsByTagName('tbody')[0];
+            selectedCoursesTable.innerHTML = '';
+
+            data.choices.forEach(choice => {
+                const newRow = selectedCoursesTable.insertRow();
+                newRow.innerHTML = `
+                    <td>${choice.cid}</td>
+                    <td>${choice.cname}</td>
+                    <td>${choice.credit}</td>
+                    <td>
+                        <button class="layui-btn layui-btn-sm layui-bg-red remove-btn" data-cid="${choice.cid}">删除</button>
+                    </td>
+                `;
+
+                newRow.querySelector('.remove-btn').addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    fetch('/delete_choice', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ cid: choice.cid })
+                    }).then(response => response.json())
+                      .then(data => {
+                          if (data.success) {
+                              selectedCoursesTable.deleteRow(newRow.rowIndex - 1);
+                              console.log(data.message);
+                          } else {
+                              console.error(data.message);
+                          }
+                      });
+                });
+            });
+        });
+}
+</script>
+</body>
+</html>
