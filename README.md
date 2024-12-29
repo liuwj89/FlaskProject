@@ -49,4 +49,4 @@ python create.py
 python app.py
 ```
 
-应用将运行在 http://127.0.0.1:5000/。
+应用将运行在 http://127.0.0.1:5000/ 。
